@@ -19,7 +19,7 @@ export default function Home() {
         </div>
         <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
-            Discover the World's
+            Discover
             <span className="text-emerald-400"> Most Amazing</span> Places
           </h1>
           <p className="text-lg md:text-xl text-gray-200 mb-10 max-w-2xl mx-auto">
@@ -49,7 +49,7 @@ export default function Home() {
             Featured Destinations
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Handpicked selection of the world's most incredible places to visit
+            Handpicked selection of the most incredible places to visit
           </p>
           <div className="w-24 h-1 bg-emerald-500 mx-auto mt-4 rounded-full" />
         </div>

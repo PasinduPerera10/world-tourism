@@ -13,7 +13,7 @@ export default function Footer() {
               <span className="text-xl font-bold text-white">WorldTourism</span>
             </div>
             <p className="text-gray-400 text-sm leading-relaxed">
-              Explore the world's most amazing destinations. Your journey around the globe starts here.
+              Explore the most amazing destinations across the globe. Your journey starts here.
             </p>
           </div>
           <div>
