@@ -28,9 +28,6 @@ export default function Navbar() {
             <Link href="/continents" className="text-gray-600 hover:text-emerald-600 transition-colors font-medium">
               Continents
             </Link>
-            <Link href="/dashboard" className="text-gray-600 hover:text-emerald-600 transition-colors font-medium">
-              Dashboard
-            </Link>
           </div>
           <div className="md:hidden flex items-center">
             <button
@@ -59,9 +56,6 @@ export default function Navbar() {
             </Link>
             <Link href="/continents" className="block text-gray-600 hover:text-emerald-600 font-medium" onClick={() => setMobileOpen(false)}>
               Continents
-            </Link>
-            <Link href="/dashboard" className="block text-gray-600 hover:text-emerald-600 font-medium" onClick={() => setMobileOpen(false)}>
-              Dashboard
             </Link>
           </div>
         </div>

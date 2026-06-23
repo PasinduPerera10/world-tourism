@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { fetchDestinations } from "@/lib/api-client";
+import { destinations as seedData } from "@/data/destinations";
+import { enrichDestination } from "@/lib/api-service";
 import DestinationCard from "@/components/DestinationCard";
 
 export const dynamic = "force-dynamic";
 
-// Next.js 16 route params are a Promise
 export default async function DestinationDetailPage({
   params,
 }: {
@@ -13,19 +13,22 @@ export default async function DestinationDetailPage({
 }) {
   const { id } = await params;
 
-  // Fetch all destinations from API to find this one and related
+  // Enrich directly from seed data server-side
   let destination: any = null;
   let related: any[] = [];
 
   try {
-    const allData = await fetchDestinations();
-    destination = allData.destinations.find((d: any) => d.id === id) || null;
-
-    if (destination) {
-      related = allData.destinations
-        .filter((d: any) => d.continent === destination.continent && d.id !== destination.id)
-        .slice(0, 3);
+    const seed = seedData.find((d) => d.id === id);
+    if (!seed) {
+      notFound();
     }
+    destination = await enrichDestination(seed);
+
+    // Get related destinations from the same continent
+    const relatedSeeds = seedData
+      .filter((d) => d.continent === seed.continent && d.id !== seed.id)
+      .slice(0, 3);
+    related = await Promise.all(relatedSeeds.map((d) => enrichDestination(d)));
   } catch {
     // Fallback handled below
   }

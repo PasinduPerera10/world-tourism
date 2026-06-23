@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { fetchContinents } from "@/lib/api-client";
+import { destinations as seedData, continents as continentNames } from "@/data/destinations";
+import { enrichDestination } from "@/lib/api-service";
 
 const continentDisplayData: Record<string, { color: string; img: string; desc: string }> = {
   "Asia": { color: "from-rose-500 to-pink-600", img: "https://images.unsplash.com/photo-1534274988757-a28bf1a57c17?w=800&h=500&fit=crop", desc: "From ancient temples to futuristic cities, Asia offers a rich tapestry of cultures and landscapes." },
@@ -15,8 +16,25 @@ export default async function ContinentsPage() {
   let continentData: { name: string; destinationCount: number; destinations: { id: string; name: string; country: string; image: string; rating: number }[] }[] = [];
 
   try {
-    const data = await fetchContinents();
-    continentData = data.continents;
+    // Enrich all destinations in parallel server-side, group by continent
+    const allEnriched = await Promise.all(
+      seedData.map((d) => enrichDestination(d))
+    );
+    
+    continentData = continentNames.map((name) => {
+      const continentDestinations = allEnriched.filter((d) => d.continent === name);
+      return {
+        name,
+        destinationCount: continentDestinations.length,
+        destinations: continentDestinations.map((d) => ({
+          id: d.id,
+          name: d.name,
+          country: d.country,
+          image: d.image,
+          rating: d.rating,
+        })),
+      };
+    });
   } catch {
     // Fallback: empty data
   }

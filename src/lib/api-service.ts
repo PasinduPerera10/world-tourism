@@ -1,13 +1,13 @@
 /**
  * Server-side API service that integrates with multiple open-source/real-time APIs:
- * - REST Countries API (https://restcountries.com) - free, no API key needed
- * - Open-Meteo API (https://open-meteo.com) - free, no API key needed, realtime sunrise/sunset
- * - OpenTripMap API (optional, API key from env)
+ * - REST Countries API (https://restcountries.com) - free, no API key
+ * - Open-Meteo API (https://open-meteo.com) - free, no API key, realtime sunrise/sunset
+ * - UNESCO World Heritage API via Wikipedia - free data on heritage sites
  */
 
 const REST_COUNTRIES_BASE = "https://restcountries.com/v3.1";
 const OPEN_METEO_BASE = "https://api.open-meteo.com/v1";
-const UNSPLASH_BASE = "https://api.unsplash.com/search/photos";
+const WIKIPEDIA_BASE = "https://en.wikipedia.org/api/rest_v1";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -32,6 +32,16 @@ export interface SunData {
   timezone: string;
   dayLength: string;
   isDay: boolean;
+  sunPosition: number; // 0-100 percentage across the sky
+}
+
+export interface UnescoSite {
+  name: string;
+  country: string;
+  image?: string;
+  description?: string;
+  year?: number;
+  category?: string;
 }
 
 export interface EnrichedDestination {
@@ -50,9 +60,10 @@ export interface EnrichedDestination {
   highlights: string[];
   countryInfo: CountryInfo | null;
   sunData: SunData | null;
+  unesco: UnescoSite | null;
 }
 
-// ─── Fallback rich data (used when external APIs are unavailable) ─────────────
+// ─── Fallback rich data ──────────────────────────────────────────────────────
 
 const FALLBACK_DATA: Record<string, Partial<EnrichedDestination>> = {
   "eiffel-tower": {
@@ -232,6 +243,52 @@ const FALLBACK_DATA: Record<string, Partial<EnrichedDestination>> = {
   },
 };
 
+// ─── UNESCO via Wikipedia API ─────────────────────────────────────────────────
+
+const UNESCO_WIKI_MAP: Record<string, string> = {
+  "eiffel-tower": "Eiffel Tower",
+  "great-wall": "Great Wall of China",
+  "taj-mahal": "Taj Mahal",
+  "machu-picchu": "Machu Picchu",
+  "sydney-opera": "Sydney Opera House",
+  "pyramids-giza": "Pyramids of Giza",
+  "grand-canyon": "Grand Canyon",
+  "colosseum": "Colosseum",
+  "mount-fuji": "Mount Fuji",
+  "petra": "Petra",
+  "angkor-wat": "Angkor Wat",
+  "statue-liberty": "Statue of Liberty",
+  "sagrada-familia": "Sagrada Família",
+  "venice-canals": "Venice",
+  "christ-redeemer": "Christ the Redeemer (statue)",
+};
+
+export async function fetchUnescoSite(id: string, name: string): Promise<UnescoSite | null> {
+  const wikiTitle = UNESCO_WIKI_MAP[id] || name;
+  if (!wikiTitle) return null;
+
+  try {
+    // Get Wikipedia extract + image
+    const res = await fetch(
+      `${WIKIPEDIA_BASE}/page/summary/${encodeURIComponent(wikiTitle)}`,
+      { signal: AbortSignal.timeout(5000), next: { revalidate: 86400 } }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+
+    return {
+      name: data.title || name,
+      country: "",
+      image: data.thumbnail?.source || undefined,
+      description: data.extract?.split(".")[0] + "." || undefined,
+      year: undefined,
+      category: "UNESCO World Heritage Site",
+    };
+  } catch {
+    return null;
+  }
+}
+
 // ─── REST Countries API ───────────────────────────────────────────────────────
 
 export async function fetchCountryInfo(countryName: string): Promise<CountryInfo | null> {
@@ -288,8 +345,8 @@ function mapCountry(data: any): CountryInfo {
 export async function fetchSunData(lat: number, lng: number): Promise<SunData | null> {
   try {
     const res = await fetch(
-      `${OPEN_METEO_BASE}/forecast?latitude=${lat}&longitude=${lng}&daily=sunrise,sunset&timezone=auto&forecast_days=1`,
-      { signal: AbortSignal.timeout(5000), next: { revalidate: 300 } } // 5 min cache
+      `${OPEN_METEO_BASE}/forecast?latitude=${lat}&longitude=${lng}&daily=sunrise,sunset&timezone=auto&forecast_days=1&current_weather=true`,
+      { signal: AbortSignal.timeout(5000), next: { revalidate: 300 } }
     );
     if (!res.ok) return null;
     const data = await res.json();
@@ -304,7 +361,18 @@ export async function fetchSunData(lat: number, lng: number): Promise<SunData | 
     const sunsetDate = new Date(sunset);
     const isDay = now >= sunriseDate && now <= sunsetDate;
 
-    // Calculate day length
+    // Calculate sun position percentage across the sky (0=left, 100=right)
+    let sunPosition = 50;
+    if (isDay) {
+      const dayMs = sunsetDate.getTime() - sunriseDate.getTime();
+      const elapsedMs = now.getTime() - sunriseDate.getTime();
+      sunPosition = Math.min(100, Math.max(0, (elapsedMs / dayMs) * 100));
+    } else if (now < sunriseDate) {
+      // Before sunrise - moon is in the sky
+      const nightMs = now.getTime() - sunsetDate.getTime();
+      sunPosition = Math.min(50, Math.max(0, (nightMs / (24 * 3600000)) * 50));
+    }
+
     const diffMs = sunsetDate.getTime() - sunriseDate.getTime();
     const hours = Math.floor(diffMs / 3600000);
     const minutes = Math.floor((diffMs % 3600000) / 60000);
@@ -315,6 +383,7 @@ export async function fetchSunData(lat: number, lng: number): Promise<SunData | 
       timezone: data.timezone || "UTC",
       dayLength: `${hours}h ${minutes}m`,
       isDay,
+      sunPosition,
     };
   } catch {
     return null;
@@ -328,8 +397,8 @@ export async function enrichDestination(
 ): Promise<EnrichedDestination> {
   const fallback = FALLBACK_DATA[seed.id] || {
     description: `${seed.name} in ${seed.country} - a must-visit destination in ${seed.continent}.`,
-    longDescription: `${seed.name} is one of the most remarkable destinations in ${seed.continent}, located in ${seed.country}. This iconic location attracts millions of visitors from around the world who come to experience its unique beauty and cultural significance.`,
-    image: `https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800&h=600&fit=crop`,
+    longDescription: `${seed.name} is one of the most remarkable destinations in ${seed.continent}, located in ${seed.country}. This iconic location attracts millions of visitors from around the world.`,
+    image: "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800&h=600&fit=crop",
     rating: 4.5,
     bestTimeToVisit: "Year-round",
     currency: "Local currency",
@@ -337,9 +406,10 @@ export async function enrichDestination(
     highlights: ["Guided Tours", "Scenic Views", "Cultural Experience", "Photography"],
   };
 
-  const [countryInfo, sunData] = await Promise.all([
+  const [countryInfo, sunData, unesco] = await Promise.all([
     fetchCountryInfo(seed.country),
     fetchSunData(seed.coordinates.lat, seed.coordinates.lng),
+    fetchUnescoSite(seed.id, seed.name),
   ]);
 
   return {
@@ -349,7 +419,7 @@ export async function enrichDestination(
     continent: seed.continent,
     coordinates: seed.coordinates,
     description: fallback.description || `${seed.name} - A top destination in ${seed.country}.`,
-    longDescription: fallback.longDescription || `${seed.name} is located in ${seed.country} (${seed.continent}). It is one of the world's most celebrated destinations.`,
+    longDescription: fallback.longDescription || `${seed.name} is located in ${seed.country} (${seed.continent}).`,
     image: fallback.image || "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800&h=600&fit=crop",
     rating: fallback.rating || 4.5,
     bestTimeToVisit: fallback.bestTimeToVisit || "Year-round",
@@ -362,5 +432,6 @@ export async function enrichDestination(
     highlights: fallback.highlights || ["Guided Tours", "Scenic Views", "Cultural Experience", "Photography"],
     countryInfo,
     sunData,
+    unesco,
   };
 }
