@@ -1,8 +1,9 @@
 import Link from "next/link";
-import type { Destination } from "@/data/destinations";
+import type { Destination } from "@/lib/api-client";
 
 export default function DestinationCard({ destination }: { destination: Destination }) {
   const stars = Math.round(destination.rating);
+  const fullStars = Math.floor(destination.rating);
   return (
     <Link
       href={`/destination/${destination.id}`}

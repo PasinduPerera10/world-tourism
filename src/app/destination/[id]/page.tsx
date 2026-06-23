@@ -1,26 +1,42 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { destinations } from "@/data/destinations";
+import { fetchDestinations } from "@/lib/api-client";
 import DestinationCard from "@/components/DestinationCard";
 
+export const dynamic = "force-dynamic";
+
+// Next.js 16 route params are a Promise
 export default async function DestinationDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const destination = destinations.find((d) => d.id === id);
+
+  // Fetch all destinations from API to find this one and related
+  let destination: any = null;
+  let related: any[] = [];
+
+  try {
+    const allData = await fetchDestinations();
+    destination = allData.destinations.find((d: any) => d.id === id) || null;
+
+    if (destination) {
+      related = allData.destinations
+        .filter((d: any) => d.continent === destination.continent && d.id !== destination.id)
+        .slice(0, 3);
+    }
+  } catch {
+    // Fallback handled below
+  }
 
   if (!destination) {
     notFound();
   }
 
-  const relatedDestinations = destinations
-    .filter((d) => d.continent === destination.continent && d.id !== destination.id)
-    .slice(0, 3);
-
   const fullStars = Math.floor(destination.rating);
   const hasHalfStar = destination.rating % 1 >= 0.5;
+  const currentYear = new Date().getFullYear();
 
   return (
     <div>
@@ -50,6 +66,12 @@ export default async function DestinationDetailPage({
             </svg>
             {destination.country} &bull; {destination.continent}
           </p>
+          {/* Show real-time flag from API enrichment */}
+          {destination.countryInfo?.flagEmoji && (
+            <span className="inline-block mt-2 text-3xl" role="img" aria-label={`Flag of ${destination.country}`}>
+              {destination.countryInfo.flagEmoji}
+            </span>
+          )}
         </div>
       </section>
 
@@ -65,7 +87,7 @@ export default async function DestinationDetailPage({
 
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Highlights</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
-              {destination.highlights.map((highlight, index) => (
+              {destination.highlights.map((highlight: string, index: number) => (
                 <div key={index} className="flex items-center gap-3 bg-emerald-50 rounded-xl p-4">
                   <div className="flex-shrink-0 w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
                     <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -76,6 +98,41 @@ export default async function DestinationDetailPage({
                 </div>
               ))}
             </div>
+
+            {/* Real-time country info from REST Countries API */}
+            {destination.countryInfo && (
+              <>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Country Information</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                  {destination.countryInfo.capital && (
+                    <div className="bg-blue-50 rounded-xl p-4">
+                      <p className="text-xs text-blue-600 font-medium uppercase tracking-wide">Capital</p>
+                      <p className="text-lg font-semibold text-gray-800">{destination.countryInfo.capital}</p>
+                    </div>
+                  )}
+                  {destination.countryInfo.population && (
+                    <div className="bg-purple-50 rounded-xl p-4">
+                      <p className="text-xs text-purple-600 font-medium uppercase tracking-wide">Population</p>
+                      <p className="text-lg font-semibold text-gray-800">
+                        {(destination.countryInfo.population / 1_000_000).toFixed(1)}M
+                      </p>
+                    </div>
+                  )}
+                  {destination.countryInfo.region && (
+                    <div className="bg-amber-50 rounded-xl p-4">
+                      <p className="text-xs text-amber-600 font-medium uppercase tracking-wide">Region</p>
+                      <p className="text-lg font-semibold text-gray-800">{destination.countryInfo.region}</p>
+                    </div>
+                  )}
+                  {destination.countryInfo.timezones && (
+                    <div className="bg-teal-50 rounded-xl p-4">
+                      <p className="text-xs text-teal-600 font-medium uppercase tracking-wide">Time Zones</p>
+                      <p className="text-lg font-semibold text-gray-800">{destination.countryInfo.timezones[0]}</p>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Sidebar */}
@@ -118,7 +175,9 @@ export default async function DestinationDetailPage({
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Currency</p>
-                    <p className="text-sm font-semibold text-gray-800">{destination.currency}</p>
+                    <p className="text-sm font-semibold text-gray-800">
+                      {destination.currencyInfo?.symbol || ""} {destination.currency}
+                    </p>
                   </div>
                 </div>
 
@@ -148,7 +207,24 @@ export default async function DestinationDetailPage({
                 </div>
               </div>
 
-              <div className="mt-6">
+              {/* Map link from REST Countries API */}
+              {destination.countryInfo?.mapUrl && (
+                <div className="mt-4">
+                  <a
+                    href={destination.countryInfo.mapUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-xl font-medium transition-all"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                    </svg>
+                    View on Google Maps
+                  </a>
+                </div>
+              )}
+
+              <div className="mt-4">
                 <Link
                   href="/destinations"
                   className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-semibold transition-all hover:shadow-lg"
@@ -165,7 +241,7 @@ export default async function DestinationDetailPage({
       </section>
 
       {/* Related Destinations */}
-      {relatedDestinations.length > 0 && (
+      {related.length > 0 && (
         <section className="bg-gray-100 py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-10">
@@ -177,7 +253,7 @@ export default async function DestinationDetailPage({
               </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-              {relatedDestinations.map((d) => (
+              {related.map((d: any) => (
                 <DestinationCard key={d.id} destination={d} />
               ))}
             </div>

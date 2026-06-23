@@ -1,17 +1,26 @@
 import Link from "next/link";
-import { destinations } from "@/data/destinations";
+import { fetchContinents } from "@/lib/api-client";
 
-const continentData = [
-  { name: "Asia", color: "from-rose-500 to-pink-600", img: "https://images.unsplash.com/photo-1534274988757-a28bf1a57c17?w=800&h=500&fit=crop", desc: "From ancient temples to futuristic cities, Asia offers a rich tapestry of cultures and landscapes." },
-  { name: "Africa", color: "from-amber-500 to-orange-600", img: "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=800&h=500&fit=crop", desc: "Home to vast savannas, diverse wildlife, and ancient civilizations." },
-  { name: "Europe", color: "from-blue-500 to-indigo-600", img: "https://images.unsplash.com/photo-1467269204594-9661b134dd2b?w=800&h=500&fit=crop", desc: "A continent rich in history, art, architecture, and culinary traditions." },
-  { name: "North America", color: "from-emerald-500 to-teal-600", img: "https://images.unsplash.com/photo-1506903789192-9108654681c1?w=800&h=500&fit=crop", desc: "From natural wonders to vibrant metropolises, North America has it all." },
-  { name: "South America", color: "from-green-500 to-emerald-600", img: "https://images.unsplash.com/photo-1619546952812-520e98064a52?w=800&h=500&fit=crop", desc: "Rainforests, mountains, and ancient ruins await in this diverse continent." },
-  { name: "Australia/Oceania", color: "from-cyan-500 to-blue-600", img: "https://images.unsplash.com/photo-1624138784614-87fd1b6528f8?w=800&h=500&fit=crop", desc: "Island paradises, unique wildlife, and stunning natural beauty." },
-  { name: "Antarctica", color: "from-sky-400 to-blue-500", img: "https://images.unsplash.com/photo-1551361415-69c1e8c7b5f8?w=800&h=500&fit=crop", desc: "The last great wilderness, a pristine continent of ice and snow." },
-];
+const continentDisplayData: Record<string, { color: string; img: string; desc: string }> = {
+  "Asia": { color: "from-rose-500 to-pink-600", img: "https://images.unsplash.com/photo-1534274988757-a28bf1a57c17?w=800&h=500&fit=crop", desc: "From ancient temples to futuristic cities, Asia offers a rich tapestry of cultures and landscapes." },
+  "Africa": { color: "from-amber-500 to-orange-600", img: "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=800&h=500&fit=crop", desc: "Home to vast savannas, diverse wildlife, and ancient civilizations." },
+  "Europe": { color: "from-blue-500 to-indigo-600", img: "https://images.unsplash.com/photo-1467269204594-9661b134dd2b?w=800&h=500&fit=crop", desc: "A continent rich in history, art, architecture, and culinary traditions." },
+  "North America": { color: "from-emerald-500 to-teal-600", img: "https://images.unsplash.com/photo-1506903789192-9108654681c1?w=800&h=500&fit=crop", desc: "From natural wonders to vibrant metropolises, North America has it all." },
+  "South America": { color: "from-green-500 to-emerald-600", img: "https://images.unsplash.com/photo-1619546952812-520e98064a52?w=800&h=500&fit=crop", desc: "Rainforests, mountains, and ancient ruins await in this diverse continent." },
+  "Australia/Oceania": { color: "from-cyan-500 to-blue-600", img: "https://images.unsplash.com/photo-1624138784614-87fd1b6528f8?w=800&h=500&fit=crop", desc: "Island paradises, unique wildlife, and stunning natural beauty." },
+  "Antarctica": { color: "from-sky-400 to-blue-500", img: "https://images.unsplash.com/photo-1551361415-69c1e8c7b5f8?w=800&h=500&fit=crop", desc: "The last great wilderness, a pristine continent of ice and snow." },
+};
 
-export default function ContinentsPage() {
+export default async function ContinentsPage() {
+  let continentData: { name: string; destinationCount: number; destinations: { id: string; name: string; country: string; image: string; rating: number }[] }[] = [];
+
+  try {
+    const data = await fetchContinents();
+    continentData = data.continents;
+  } catch {
+    // Fallback: empty data
+  }
+
   return (
     <div>
       <section className="bg-gradient-to-r from-emerald-600 to-emerald-800 py-16">
@@ -28,26 +37,30 @@ export default function ContinentsPage() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="space-y-20">
           {continentData.map((continent, index) => {
-            const continentDestinations = destinations.filter((d) => d.continent === continent.name);
+            const display = continentDisplayData[continent.name] || {
+              color: "from-emerald-500 to-teal-600",
+              img: "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800&h=500&fit=crop",
+              desc: "Explore amazing destinations in this continent.",
+            };
             return (
               <div key={continent.name}>
                 <div className="relative rounded-3xl overflow-hidden mb-8 h-64 md:h-80">
                   <img
-                    src={continent.img}
+                    src={display.img}
                     alt={continent.name}
                     className="w-full h-full object-cover"
                   />
-                  <div className={`absolute inset-0 bg-gradient-to-r ${continent.color} opacity-80`} />
+                  <div className={`absolute inset-0 bg-gradient-to-r ${display.color} opacity-80`} />
                   <div className="absolute inset-0 flex flex-col justify-center px-8 md:px-16">
                     <h2 className="text-3xl md:text-5xl font-bold text-white mb-3">{continent.name}</h2>
-                    <p className="text-white/90 text-lg max-w-xl">{continent.desc}</p>
+                    <p className="text-white/90 text-lg max-w-xl">{display.desc}</p>
                     <p className="text-white/80 text-sm mt-2">
-                      {continentDestinations.length} destinations
+                      {continent.destinationCount} destinations
                     </p>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {continentDestinations.map((d) => (
+                  {continent.destinations.map((d) => (
                     <Link
                       key={d.id}
                       href={`/destination/${d.id}`}
