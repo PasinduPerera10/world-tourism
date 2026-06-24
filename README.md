@@ -123,10 +123,6 @@ The **Dashboard** (`/dashboard`) provides:
 - **🏛️ Country Information** - Capital, population, flag, language, currency from REST Countries API
 - **🗺️ Google Maps Integration** - Direct links to location on Google Maps
 
-## 🤝 Contributing
-
-Contributions are welcome! Feel free to open issues or submit pull requests.
-
 ## 📄 License
 
 This project is open source. All destination data and images are used for educational/demonstration purposes.
