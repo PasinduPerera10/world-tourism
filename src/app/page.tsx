@@ -45,15 +45,22 @@ export default async function Home() {
       {topDestination && (
         <section className="relative overflow-hidden min-h-[600px] md:min-h-[700px]">
           {/* Sky background that changes from sunrise → day → sunset → night */}
-          <div className={`absolute inset-0 transition-all duration-[2000ms] ${
-            topDestination.sunData?.isDay
-              ? topDestination.sunData.sunPosition < 30
-                ? "bg-gradient-to-b from-orange-300 via-sky-300 to-blue-400"
-                : topDestination.sunData.sunPosition > 70
-                  ? "bg-gradient-to-b from-amber-600 via-orange-400 to-purple-500"
-                  : "bg-gradient-to-b from-sky-400 via-blue-300 to-cyan-400"
-              : "bg-gradient-to-b from-slate-900 via-indigo-900 to-purple-950"
-          }`}>
+          <div className="absolute inset-0">
+            <img
+              src="https://images.unsplash.com/photo-1587595431973-160d0d94add1?w=1920&h=1080&fit=crop"
+              alt="Machu Picchu background"
+              className="w-full h-full object-cover"
+            />
+            <div className={`absolute inset-0 transition-all duration-[2000ms] ${
+              topDestination.sunData?.isDay
+                ? topDestination.sunData.sunPosition < 30
+                  ? "bg-gradient-to-b from-orange-300/70 via-sky-300/70 to-blue-400/70"
+                  : topDestination.sunData.sunPosition > 70
+                    ? "bg-gradient-to-b from-amber-600/70 via-orange-400/70 to-purple-500/70"
+                    : "bg-gradient-to-b from-sky-400/70 via-blue-300/70 to-cyan-400/70"
+                : "bg-gradient-to-b from-slate-900/80 via-indigo-900/80 to-purple-950/80"
+            }`} />
+          </div>
             {/* Sun/Moon arc path (invisible arc that the sun travels along) */}
             <div className="absolute inset-0 overflow-hidden">
               {/* Sun/Moon positioned along an arc based on time */}
@@ -135,7 +142,6 @@ export default async function Home() {
                 </>
               )}
             </div>
-          </div>
 
           {/* Content overlay */}
           <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">

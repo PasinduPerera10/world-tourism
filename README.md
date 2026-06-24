@@ -7,7 +7,8 @@ A modern, real-time web application for discovering world tourism destinations. 
 | Feature | Description |
 |---------|-------------|
 | **🌅 Real-Time Sunrise/Sunset** | Live sunrise, sunset, and day/night status via Open-Meteo API |
-| **🏆 Dashboard** | World's #1 destination with real-time solar data and country info |
+| **🏆 World's #1 Destination** | Hero spotlight with real-time solar data and country info |
+| **🌍 UNESCO Heritage Sites** | Dedicated section showcasing UNESCO World Heritage locations |
 | **🗺️ 25+ Destinations** | Curated world-famous landmarks and natural wonders |
 | **🌐 REST Countries Integration** | Live flag emoji, capital, population, currency, language data |
 | **🔍 Search & Filter** | Filter by continent, search by name, sort by rating/name |

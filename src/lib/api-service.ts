@@ -357,19 +357,20 @@ export async function fetchSunData(lat: number, lng: number): Promise<SunData | 
     if (!sunrise || !sunset) return null;
 
     const now = new Date();
+    const nowLocal = new Date(now.toLocaleString("en-US", { timeZone: data.timezone || "UTC" }));
     const sunriseDate = new Date(sunrise);
     const sunsetDate = new Date(sunset);
-    const isDay = now >= sunriseDate && now <= sunsetDate;
+    const isDay = nowLocal >= sunriseDate && nowLocal <= sunsetDate;
 
     // Calculate sun position percentage across the sky (0=left, 100=right)
     let sunPosition = 50;
     if (isDay) {
       const dayMs = sunsetDate.getTime() - sunriseDate.getTime();
-      const elapsedMs = now.getTime() - sunriseDate.getTime();
+      const elapsedMs = nowLocal.getTime() - sunriseDate.getTime();
       sunPosition = Math.min(100, Math.max(0, (elapsedMs / dayMs) * 100));
-    } else if (now < sunriseDate) {
+    } else if (nowLocal < sunriseDate) {
       // Before sunrise - moon is in the sky
-      const nightMs = now.getTime() - sunsetDate.getTime();
+      const nightMs = nowLocal.getTime() - sunsetDate.getTime();
       sunPosition = Math.min(50, Math.max(0, (nightMs / (24 * 3600000)) * 50));
     }
 
